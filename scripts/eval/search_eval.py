@@ -14,7 +14,7 @@ def _keyword_search(keywords: list[str], space_key: str = CONFLUENCE_SPACE) -> l
     confluence = Confluence(
         url=os.environ["CONFLUENCE_URL"],
         username=os.environ["CONFLUENCE_EMAIL"],
-        password=os.environ["CONFLUENCE_API_TOKEN"],
+        password=os.environ["CONFLUENCE_TOKEN"],
         cloud=True,
     )
 

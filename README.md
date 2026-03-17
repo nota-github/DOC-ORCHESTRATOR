@@ -59,6 +59,14 @@ The MCP server (Confluence connection) will be configured automatically via `.mc
 /doc-orchestrator
 ```
 
+## Skills
+
+| Skill | Target | Description |
+|-------|--------|-------------|
+| `/doc-orchestrator` | 일반 사용자 | 회의록 → Confluence 문서 업데이트 (메인 워크플로) |
+| `/index-manager` | 개발자 | RAG 벡터 인덱스 빌드/관리/상태 확인 |
+| `/eval-orchestrator` | 개발자 | 검색 비교 평가 (키워드 vs RAG) + 수락률 평가 |
+
 ## Usage Flow
 
 ### Input Options
@@ -98,13 +106,30 @@ doc-orchestrator/
 ├── DESIGN.md                          # Agent & Classifier architecture
 ├── scripts/
 │   ├── transcribe.py                  # Audio → text transcription
-│   └── helper_mcp.py                  # Confluence helper MCP server
+│   ├── helper_mcp.py                  # Confluence helper MCP server
+│   ├── evaluate.py                    # Evaluation CLI entry point
+│   ├── eval/                          # Evaluation modules
+│   │   ├── search_eval.py             # Keyword vs RAG search comparison
+│   │   ├── acceptance_eval.py         # Acceptance rate evaluation
+│   │   └── report.py                  # Report generation (JSON + Markdown)
+│   └── rag/                           # RAG pipeline
+│       ├── index.py                   # Index build (full / incremental)
+│       ├── search.py                  # Vector search
+│       ├── store.py                   # ChromaDB vector store
+│       ├── fetcher.py                 # Confluence page fetcher
+│       ├── chunker.py                 # Document chunker
+│       ├── embedder.py                # OpenAI embeddings
+│       └── config.py                  # RAG configuration
 ├── logs/                              # Auto-generated logs (not in git)
 │   ├── YYYY-MM-DD_HH-MM_transcript.json
 │   ├── YYYY-MM-DD_HH-MM_meeting_analysis.json
 │   └── YYYY-MM-DD_HH-MM_update.json
 └── .claude/
     └── skills/
+        ├── index-manager/
+        │   └── SKILL.md               # Index management skill
+        ├── eval-orchestrator/
+        │   └── SKILL.md               # Evaluation skill
         └── doc-orchestrator/
             ├── SKILL.md               # Main skill prompt
             └── domains/

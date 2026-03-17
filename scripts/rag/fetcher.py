@@ -17,7 +17,7 @@ def _create_client(
     return Confluence(
         url=url or os.environ["CONFLUENCE_URL"],
         username=email or os.environ["CONFLUENCE_EMAIL"],
-        password=token or os.environ["CONFLUENCE_API_TOKEN"],
+        password=token or os.environ["CONFLUENCE_TOKEN"],
         cloud=True,
     )
 

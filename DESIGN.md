@@ -4,6 +4,18 @@
 
 ## Overview
 
+### 스킬 구조
+
+프로젝트는 역할별로 3개의 Claude Code 스킬로 분리되어 있습니다:
+
+| 스킬 | 대상 | 역할 |
+|------|------|------|
+| `/doc-orchestrator` | 일반 사용자 | 회의록 → Confluence 문서 업데이트 (메인 워크플로) |
+| `/index-manager` | 개발자 | RAG 벡터 인덱스 빌드/관리/상태 확인 |
+| `/eval-orchestrator` | 개발자 | 검색 비교 평가 (키워드 vs RAG) + 수락률 평가 |
+
+### doc-orchestrator 흐름
+
 ```
 Meeting Transcript
        │

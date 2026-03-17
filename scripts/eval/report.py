@@ -7,7 +7,6 @@ from pathlib import Path
 
 def generate_report(
     search_eval: dict | None = None,
-    llm_judge_eval: dict | None = None,
     acceptance_eval: dict | None = None,
     output_dir: str = "logs",
 ) -> tuple[str, str]:
@@ -22,7 +21,6 @@ def generate_report(
     report = {
         "generated_at": datetime.now().isoformat(),
         "search_comparison": search_eval,
-        "llm_judge": llm_judge_eval,
         "acceptance": acceptance_eval,
     }
 
@@ -53,17 +51,6 @@ def generate_report(
                 f"| Jaccard similarity | {meeting.get('jaccard_similarity', 'N/A')} |",
                 "",
             ])
-
-    if llm_judge_eval:
-        md_lines.extend([
-            "## LLM Judge Relevance Scores",
-            "",
-        ])
-        for method, data in llm_judge_eval.items():
-            avg = data.get("avg_score", "N/A")
-            count = data.get("count", "N/A")
-            md_lines.append(f"- **{method}**: avg={avg}, n={count}")
-        md_lines.append("")
 
     if acceptance_eval:
         md_lines.extend([

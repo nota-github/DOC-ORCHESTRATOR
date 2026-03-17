@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 
 from scripts.eval.acceptance_eval import evaluate_acceptance
-from scripts.eval.llm_judge import evaluate_search_results
 from scripts.eval.report import generate_report
 from scripts.eval.search_eval import compare_searches
 
