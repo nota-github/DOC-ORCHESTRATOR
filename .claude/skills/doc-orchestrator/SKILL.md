@@ -123,16 +123,22 @@ AskUserQuestion:
 
 도메인 인식 분석에서 결합된 키워드로 Confluence 문서를 검색한다. 모든 검색은 **NPP02** (NetsPresso Platform Team) space로 범위를 한정한다.
 
-1. `space=NPP02`로 범위를 지정하여 confluence_search로 키워드 기반 검색:
+1. **키워드 검색**: `space=NPP02`로 범위를 지정하여 confluence_search로 키워드 기반 검색:
    - Step 2.7의 도메인별 키워드 사용 (범용 회의 키워드가 아님)
    - 의사결정 주제별로 여러 쿼리 실행
    - Part agent의 reference page ID를 이미 관련된 페이지로 포함
-2. 검색 결과 병합:
+2. **RAG 시맨틱 검색**: Step 2.7의 통합 키워드와 회의 요약을 결합한 쿼리로 벡터 검색 실행:
+   - `python scripts/rag/search.py --query "{통합 키워드}. {회의 핵심 내용 요약}" --top-k 15`
+   - 사전에 `python scripts/rag/index.py`로 인덱스가 구축되어 있어야 함
+   - 인덱스가 없으면 키워드 검색만 사용 (graceful fallback)
+3. 검색 결과 병합:
    - Step 1의 고정 문서 (있는 경우)
    - Step 2.6에서 이미 조회한 reference page
+   - 키워드 검색 결과 + RAG 검색 결과
+   - **양쪽 모두에서 발견된 문서는 높은 우선순위** 부여
    - Page ID 기준 중복 제거
-3. 결합된 결과에서 가장 관련성 높은 문서 선별 (최대 10개)
-4. 확인 링크와 함께 문서 목록을 사용자에게 제시
+4. 결합된 결과에서 가장 관련성 높은 문서 선별 (최대 10개)
+5. 확인 링크와 함께 문서 목록을 사용자에게 제시
 
 각 문서는 다음 형식으로 표시:
 ```

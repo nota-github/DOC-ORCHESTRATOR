@@ -6,3 +6,4 @@ test-data/
 __pycache__/
 
 PLAN.md
+data/vectordb/
