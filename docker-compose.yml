@@ -1,0 +1,11 @@
+services:
+  doc-orchestrator:
+    image: tris-ax
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    stdin_open: true
+    tty: true
+    container_name: tris-ax-test
+

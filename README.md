@@ -33,6 +33,7 @@ Copy the template below and fill in your credentials:
 
 ```bash
 # .env
+CONFLUENCE_URL=https://your-domain.atlassian.net
 CONFLUENCE_EMAIL=your-email@company.com
 CONFLUENCE_TOKEN=your-atlassian-api-token
 OPENAI_API_KEY=your-openai-api-key
@@ -94,15 +95,30 @@ doc-orchestrator/
 ├── .gitignore
 ├── requirements.txt                   # Python dependencies (openai)
 ├── README.md
+├── DESIGN.md                          # Agent & Classifier architecture
 ├── scripts/
-│   └── transcribe.py                  # Audio → text transcription
+│   ├── transcribe.py                  # Audio → text transcription
+│   └── helper_mcp.py                  # Confluence helper MCP server
 ├── logs/                              # Auto-generated logs (not in git)
 │   ├── YYYY-MM-DD_HH-MM_transcript.json
+│   ├── YYYY-MM-DD_HH-MM_meeting_analysis.json
 │   └── YYYY-MM-DD_HH-MM_update.json
 └── .claude/
     └── skills/
         └── doc-orchestrator/
-            └── SKILL.md               # Main skill prompt
+            ├── SKILL.md               # Main skill prompt
+            └── domains/
+                ├── classifiers/
+                │   ├── topic.md       # Topic classifier (5 meeting types)
+                │   └── part.md        # Part classifier (5 domains)
+                ├── agents/
+                │   ├── q.md           # Quantization agent
+                │   ├── go.md          # Graph Optimization agent
+                │   ├── mr.md          # Model Representation agent
+                │   ├── me.md          # Model Engineering agent
+                │   └── swe.md         # Software Engineering agent
+                └── cross-cut/
+                    └── scenarios.md   # Shared S0-S3 context
 ```
 
 ## Logs
@@ -111,18 +127,6 @@ Every run generates log files in `logs/`:
 
 - `*_transcript.json` — Raw transcription from audio input
 - `*_update.json` — Full record of what was analyzed, proposed, applied, and skipped
-
-## Configuration
-
-### Confluence URL
-
-The default Confluence URL is set in `.mcp.json`:
-
-```json
-"CONFLUENCE_URL": "https://nota-dev.atlassian.net/wiki"
-```
-
-Change this to your Confluence instance URL if different.
 
 ## Troubleshooting
 

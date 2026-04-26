@@ -1,14 +1,18 @@
 """
-Meeting audio transcription using OpenAI GPT-4o mini Transcribe.
+Meeting audio transcription using OpenAI GPT-4o Transcribe.
 
 Converts audio to raw text only. Meeting summarization and analysis
 is handled by Claude in the doc-orchestrator skill.
+
+Supports long audio files by automatically chunking them into segments
+under the API's 1400-second limit.
 
 Usage:
     python scripts/transcribe.py <audio_file_path> <output_path>
 
 Requirements:
-    pip install openai
+    - ffmpeg (for audio duration detection and chunking)
+    - pip install openai
 
 Environment:
     OPENAI_API_KEY must be set
@@ -17,7 +21,13 @@ Environment:
 import sys
 import json
 import os
-from datetime import datetime
+import subprocess
+import tempfile
+import shutil
+from datetime import datetime, timezone, timedelta
+
+# Korea Standard Time (UTC+9)
+KST = timezone(timedelta(hours=9))
 from pathlib import Path
 
 try:
@@ -28,10 +38,72 @@ except ImportError:
 
 
 SUPPORTED_FORMATS = {".mp3", ".mp4", ".wav", ".m4a", ".webm", ".ogg", ".flac"}
+MAX_DURATION_SECONDS = 1300  # Leave buffer below 1400s API limit
+
+
+def get_audio_duration(audio_path: Path) -> float:
+    """Get audio duration in seconds using ffprobe."""
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(audio_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe failed: {result.stderr}")
+    return float(result.stdout.strip())
+
+
+def split_audio(audio_path: Path, chunk_duration: int, output_dir: Path) -> list[Path]:
+    """Split audio file into chunks using ffmpeg."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Use same extension as input for compatibility
+    ext = audio_path.suffix
+    output_pattern = output_dir / f"chunk_%03d{ext}"
+
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-i", str(audio_path),
+            "-f", "segment",
+            "-segment_time", str(chunk_duration),
+            "-c", "copy",  # No re-encoding, fast
+            "-reset_timestamps", "1",
+            str(output_pattern),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg split failed: {result.stderr}")
+
+    # Return sorted list of chunk files
+    chunks = sorted(output_dir.glob(f"chunk_*{ext}"))
+    return chunks
+
+
+def transcribe_single(client: OpenAI, audio_path: Path) -> str:
+    """Transcribe a single audio file."""
+    with open(audio_path, "rb") as audio_file:
+        response = client.audio.transcriptions.create(
+            model="gpt-4o-transcribe",
+            file=audio_file,
+            response_format="json",
+        )
+    return response.text
 
 
 def transcribe(audio_file_path: str) -> dict:
-    """Transcribe meeting audio using GPT-4o mini Transcribe."""
+    """Transcribe meeting audio using GPT-4o Transcribe.
+
+    Automatically chunks long audio files that exceed the API limit.
+    """
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         print("Error: OPENAI_API_KEY environment variable not set")
@@ -50,18 +122,51 @@ def transcribe(audio_file_path: str) -> dict:
 
     client = OpenAI(api_key=api_key)
 
-    with open(path, "rb") as audio_file:
-        response = client.audio.transcriptions.create(
-            model="gpt-4o-transcribe",
-            file=audio_file,
-            response_format="json",
-        )
+    # Check duration
+    duration = get_audio_duration(path)
+    print(f"Audio duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
 
-    return {
-        "transcript": response.text,
+    if duration <= MAX_DURATION_SECONDS:
+        # Short audio - transcribe directly
+        transcript = transcribe_single(client, path)
+        chunks_info = None
+    else:
+        # Long audio - split and transcribe chunks
+        num_chunks = int(duration // MAX_DURATION_SECONDS) + 1
+        print(f"Audio exceeds {MAX_DURATION_SECONDS}s limit, splitting into {num_chunks} chunks...")
+
+        temp_dir = Path(tempfile.mkdtemp(prefix="transcribe_"))
+        try:
+            chunks = split_audio(path, MAX_DURATION_SECONDS, temp_dir)
+            print(f"Created {len(chunks)} chunks")
+
+            transcripts = []
+            for i, chunk in enumerate(chunks):
+                print(f"Transcribing chunk {i+1}/{len(chunks)}...")
+                chunk_transcript = transcribe_single(client, chunk)
+                transcripts.append(chunk_transcript)
+
+            # Join transcripts with spacing
+            transcript = "\n\n".join(transcripts)
+            chunks_info = {
+                "count": len(chunks),
+                "chunk_duration_seconds": MAX_DURATION_SECONDS,
+            }
+        finally:
+            # Clean up temp directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    result = {
+        "transcript": transcript,
         "source_file": audio_file_path,
-        "processed_at": datetime.now().isoformat(),
+        "duration_seconds": duration,
+        "processed_at": datetime.now(KST).isoformat(),
     }
+
+    if chunks_info:
+        result["chunks"] = chunks_info
+
+    return result
 
 
 def main():
